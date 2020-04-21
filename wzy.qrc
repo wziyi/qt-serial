@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/wzy"/>
+    <qresource prefix="/">
+        <file>wzy/wzy.ico</file>
+    </qresource>
+</RCC>
