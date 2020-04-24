@@ -48,8 +48,8 @@ public:
     void serial_set();      //  serial set 串口设置
     void serial_open();     //  open serial 打开串口
     void serial_close();    //  close serial 关闭串口
-    void serial_write(const QString data);  //  write serial 写串口
-    void serial_read();     //  read serial 读串口
+    void serial_write(const QString data, bool mode);  //  write serial 写串口
+    QString serial_read(bool mode);                       //  read serial 读串口
     void setting_default(); //  serial default set 软件默认设置
     void setting_write();
     void setting_read();
@@ -73,6 +73,7 @@ private:
     QSerialPort m_serial;       // serial class 串口类
     settings m_currentSettings; // setting struct 设置结构体
     w_transform m_t;            // char 与 hex 互相转换
+    bool tx_mode,rx_mode;       // 发送接收模式 0 = char, 1 = hex
 
 };
 

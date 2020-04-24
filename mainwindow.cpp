@@ -71,20 +71,22 @@ void MainWindow::close_window_slot()
     m_about->close();
     this->close();
 }
-//  send line_input's string 发送文本框里的字符串
+//  send  string 发送字符串
 void MainWindow::send_char_slot()
-{
-    //  receive data for line_input 读取文本框内的字符串
-    QString d = this->ui->line_input->text();
+{  
+    QString a = this->ui->line_input->text();   //读取文本框内的字符串
 
-    // send data to text_display 将数据显示在屏幕上
-    //this->ui->text_display->setText(data);
-    this->ui->text_display->append("TX\n"+d);
-    //  auto clear 自动清空屏幕
-    display_clear_auto();
+    if(tx_mode)
+    {
+        this->ui->text_display->append("TX - hex\n"+a);
+    }
+    else
+    {
+        this->ui->text_display->append("TX - char\n"+a);
+    }
 
-    //  write serial 写串口
-    serial_write(d);
+    display_clear_auto();       //  auto clear 自动清空屏幕
+    serial_write(a, tx_mode);   //  write serial 写串口
 }
 //  clear diplay 清空屏幕
 void MainWindow::clear_display_slot()
@@ -204,7 +206,19 @@ void MainWindow::search_serial_slot()
 //  serial receive 串口接收
 void MainWindow::read_serial_slot()
 {
-    serial_read();
+    QString a= serial_read(rx_mode);
+    display_clear_auto();   //  auto clear 自动清空屏幕
+    if(!a.isEmpty())
+    {
+        if(rx_mode)
+        {
+            this->ui->text_display->append("RX - hex\n"+a);
+        }
+        else
+        {
+            this->ui->text_display->append("RX - char\n"+a);
+        }
+    }
 }
 //  pause receive 暂停接收
 void MainWindow::pause_serial_slot()
@@ -233,7 +247,6 @@ void MainWindow::display_clear_auto()
             this->ui->text_display->setText("");
         }
     }
-    //qDebug()<<char_num;
 }
 //  serial inital 串口初始化
 void MainWindow::serial_set_init()
@@ -293,11 +306,12 @@ void MainWindow::serial_set()
                 this->ui->combox_flow->itemData(this->ui->combox_flow->currentIndex()).toInt());
     m_currentSettings.stringFlowControl = this->ui->combox_flow->currentText();
 
+    tx_mode = this->ui->combox_name_2->currentIndex();
+    rx_mode = this->ui->combox_name_3->currentIndex();
 }
 //  open serial 打开串口
 void MainWindow::serial_open()
 {
-    //m_os.debug();
     //  Setting Serial Port Parameters 设置串口参数
     const settings p = m_currentSettings;
     m_serial.setPortName(p.name);
@@ -306,7 +320,9 @@ void MainWindow::serial_open()
     m_serial.setParity(p.parity);
     m_serial.setStopBits(p.stopBits);
     m_serial.setFlowControl(p.flowControl);
-    //qDebug()<<p.baudRate;
+
+    tx_mode = this->ui->combox_name_2->currentIndex();
+    rx_mode = this->ui->combox_name_3->currentIndex();
     if (m_serial.open(QIODevice::ReadWrite))
     {
         this->ui->text_display->setText("串口打开");
@@ -327,43 +343,54 @@ void MainWindow::serial_close()
     }
 }
 //  write serial 写串口
-void MainWindow::serial_write(QString data)
+void MainWindow::serial_write(QString data, bool mode)
 {
-    //  remove all space 除掉所有空格
-    data = data.remove(QRegExp("\\s"));
-    //  qstring to qbytearry 类型转换
-    QByteArray d = m_t.string_to_hex(data);
-    m_serial.write(d);
+    QByteArray tx_send_byte;
+
+    data = data.remove(QRegExp("\\s")); //  remove all space 除掉所有空格
+    if(mode)    //hex 模式
+    {
+        tx_send_byte = m_t.string_to_hex(data);
+    }
+    else        //char 模式
+    {
+        tx_send_byte = data.toUtf8();
+    }
+    m_serial.write(tx_send_byte);
 }
 //  read serial 读串口
-void MainWindow::serial_read()
-{
-    // 延时,以防数据接受不完整
+QString MainWindow::serial_read(bool mode)
+{   
     QEventLoop loop;
-    QTimer::singleShot(100,&loop,SLOT(quit()));
+    QString rx_display_string;  //经过处理后的显示在屏幕上的数据
+    QByteArray rx_raw_byte;     //接收的原始数据
+
+    QTimer::singleShot(100,&loop,SLOT(quit())); // 延时,以防数据接受不完整
     loop.exec();
-    QByteArray b = m_serial.readAll();
-    QString d = b.toHex();
-    QString e = d;
-    // Automatically Zero-Filling of odd Characters 奇数个字符自动补零
-    if (d.length() % 2)
+    rx_raw_byte = m_serial.readAll();
+
+    if(mode)    // hex 模式
     {
-        d.insert(d.length(), '0');
+        QString a = rx_raw_byte.toHex();  //把原始数据转为字符串 a
+        if (a.length() % 2) // 奇数个字符自动补零
+        {
+            a.insert(a.length(), '0');
+        }
+        //  Add a space between each two characters 每两个字符间加一个空格
+        int b = a.length(); //确定字符串长度 b
+        int i=0 , c=2;      //每隔 c 位插空格
+        for (i=2;i<b;i=i+2)
+        {
+            a.insert(c," ");
+            c=c+3;
+        }
+        rx_display_string = a;
     }
-    //  Add a space between each two characters 每两个字符间加一个空格
-    int a = d.length();
-    int i=0 , c=2;
-    for (i=2;i<a;i=i+2)
+    else        //char 模式
     {
-        d.insert(c," ");
-        c=c+3;
+        rx_display_string = QString(rx_raw_byte);   //在 char 模式下直接转换成字符串
     }
-    //  auto clear 自动清空屏幕
-    display_clear_auto();
-    if(!e.isEmpty())
-    {
-        this->ui->text_display->append("RX\n"+d);
-    }
+    return rx_display_string;
 }
 //  soft default set 软件默认设置
 void MainWindow::setting_default()
@@ -375,10 +402,13 @@ void MainWindow::setting_default()
     this->ui->combox_stopbit->setCurrentIndex(0);
     this->ui->combox_parity->setCurrentIndex(0);
     this->ui->combox_flow->setCurrentIndex(0);
+
+    this->ui->combox_name_2->setCurrentIndex(0);
+    this->ui->combox_name_3->setCurrentIndex(0);
 }
 void MainWindow::setting_write()
 {
-    int a0,a1,a2,a3,a4,a5,a6;
+    int a0,a1,a2,a3,a4,a5,a6,a7,a8;
     a0=this->ui->radio_serial->isChecked();
     a1=this->ui->combox_name->currentIndex();
     a2=this->ui->combox_baudrate->currentIndex();
@@ -386,6 +416,9 @@ void MainWindow::setting_write()
     a4=this->ui->combox_stopbit->currentIndex();
     a5=this->ui->combox_parity->currentIndex();
     a6=this->ui->combox_flow->currentIndex();
+
+    a7=this->ui->combox_name_2->currentIndex();
+    a8=this->ui->combox_name_3->currentIndex();
     //QSettings构造函数的第一个参数是ini文件的路径,第二个参数表示针对ini文件,第三个参数可以缺省
     QSettings *IniWrite = new QSettings("wzy_serial.ini", QSettings::IniFormat);
     IniWrite->setValue("radio_serial", a0);
@@ -395,12 +428,15 @@ void MainWindow::setting_write()
     IniWrite->setValue("combox_stopbit", a4);
     IniWrite->setValue("combox_parity", a5);
     IniWrite->setValue("combox_flow", a6);
+
+    IniWrite->setValue("tx_mode", a7);
+    IniWrite->setValue("rx_mode", a8);
     //写入完成后删除指针
     delete IniWrite;
 }
 void MainWindow::setting_read()
 {
-    int a0,a1,a2,a3,a4,a5,a6;
+    int a0,a1,a2,a3,a4,a5,a6,a7,a8;
     //QSettings构造函数的第一个参数是ini文件的路径,第二个参数表示针对ini文件,第三个参数可以缺省
     QSettings *iniRead = new QSettings("wzy_serial.ini", QSettings::IniFormat);
     a0= iniRead->value("radio_serial").toInt();
@@ -410,6 +446,9 @@ void MainWindow::setting_read()
     a4= iniRead->value("combox_stopbit").toInt();
     a5= iniRead->value("combox_parity").toInt();
     a6= iniRead->value("combox_flow").toInt();
+
+    a7= iniRead->value("tx_mode").toInt();
+    a8= iniRead->value("rx_mode").toInt();
     //读入完成后删除指针
     delete iniRead;
     this->ui->radio_serial->setChecked(a0);
@@ -419,4 +458,7 @@ void MainWindow::setting_read()
     this->ui->combox_stopbit->setCurrentIndex(a4);
     this->ui->combox_parity->setCurrentIndex(a5);
     this->ui->combox_flow->setCurrentIndex(a6);
+
+    this->ui->combox_name_2->setCurrentIndex(a7);
+    this->ui->combox_name_3->setCurrentIndex(a8);
 }
