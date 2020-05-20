@@ -1,16 +1,13 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QDataStream>
 #include <QFile>
-#include <QTextStream>
-#include <QCheckBox>
-#include <QDialog>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QTextBrowser>
 #include <QTimer>
-#include "QSettings"
+#include <QTextStream>
+#include <QSettings>
+#include <QSerialPortInfo>
 #include "wzy.h"
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -325,7 +322,7 @@ void MainWindow::serial_open()
     rx_mode = this->ui->combox_name_3->currentIndex();
     if (m_serial.open(QIODevice::ReadWrite))
     {
-        this->ui->text_display->setText("串口打开");
+        this->ui->text_display->append("串口打开");
     }
     else
     {
@@ -339,7 +336,7 @@ void MainWindow::serial_close()
     if (m_serial.isOpen())
     {
         m_serial.close();
-        this->ui->text_display->setText("串口关闭");
+        this->ui->text_display->append("串口关闭");
     }
 }
 //  write serial 写串口
@@ -361,12 +358,12 @@ void MainWindow::serial_write(QString data, bool mode)
 //  read serial 读串口
 QString MainWindow::serial_read(bool mode)
 {   
-    QEventLoop loop;
+    //QEventLoop loop;
     QString rx_display_string;  //经过处理后的显示在屏幕上的数据
     QByteArray rx_raw_byte;     //接收的原始数据
 
-    QTimer::singleShot(100,&loop,SLOT(quit())); // 延时,以防数据接受不完整
-    loop.exec();
+    //QTimer::singleShot(10,&loop,SLOT(quit())); // 延时,以防数据接受不完整
+    //loop.exec();
     rx_raw_byte = m_serial.readAll();
 
     if(mode)    // hex 模式

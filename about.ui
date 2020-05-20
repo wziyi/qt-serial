@@ -90,7 +90,7 @@
      </sizepolicy>
     </property>
     <property name="text">
-     <string>wc@mcuic.cn </string>
+     <string>wzy@mcuic.cn </string>
     </property>
    </widget>
    <widget class="QPushButton" name="push_qt">
@@ -119,7 +119,7 @@
      <x>0</x>
      <y>0</y>
      <width>350</width>
-     <height>23</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
