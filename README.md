@@ -11,7 +11,7 @@ Qt 5.14.1 + MinGW 7.3.0
 
 ### 联系方式
 微信 nuclinux    
-邮箱 wc@mcuic.cn   
+邮箱 wzy@mcuic.cn   
 
 ### 致谢
 Qt  www.qt.io     
